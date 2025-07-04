@@ -3,7 +3,7 @@ version: "3.8"
 services:
   mysql:
     image: mysql:5.7
-    container_name: mysql_db_n3
+    container_name: n3_mysql
     restart: always
     environment:
       MYSQL_DATABASE: wordpress_db
@@ -12,30 +12,22 @@ services:
       MYSQL_ROOT_PASSWORD: root_password_123
     volumes:
       - db_data:/var/lib/mysql
-    # Adicionamos uma verificação de saúde para garantir que o BD esteja pronto
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
 
   wordpress:
     image: wordpress:latest
-    container_name: wordpress_app_n3
+    container_name: n3_wordpress
     restart: always
     depends_on:
-      mysql:
-        condition: service_healthy # Espera o BD estar saudável
+      - mysql
     environment:
       WORDPRESS_DB_HOST: mysql:3306
-      WORDPRESS_DB_NAME: wordpress_db
       WORDPRESS_DB_USER: wp_user
       WORDPRESS_DB_PASSWORD: wp_password
-      WORDPRESS_HOME: http://localhost:8081/prova
-      WORDPRESS_SITEURL: http://localhost:8081/prova
-      # CORREÇÃO AQUI: Usamos $$ para "escapar" o cifrão.
+      WORDPRESS_DB_NAME: wordpress_db
+      # AQUI: Mudamos a porta para 8080 na configuração do WordPress
       WORDPRESS_CONFIG_EXTRA: |
-        define('WP_HOME', 'http://localhost:8081/prova');
-        define('WP_SITEURL', 'http://localhost:8081/prova');
+        define('WP_HOME', 'http://localhost:8080/prova');
+        define('WP_SITEURL', 'http://localhost:8080/prova');
         if (isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) && $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
           $$_SERVER['HTTPS'] = 'on';
         }
@@ -44,22 +36,21 @@ services:
 
   nginx:
     image: nginx:latest
-    container_name: nginx_proxy_n3
+    container_name: n3_nginx_proxy
     restart: always
     depends_on:
       - wordpress
     ports:
-      - "8081:80"
+      - "8080:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
-    container_name: phpmyadmin_gui_n3
+    container_name: n3_phpmyadmin
     restart: always
     depends_on:
-      mysql:
-        condition: service_healthy
+      - mysql
     ports:
       - "8888:80"
     environment:
